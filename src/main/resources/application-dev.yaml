@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/happynewsdb
+    username: youruser
+    password: yourpass
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+app:
+  storage:
+    type: minio
+    minio:
+      endpoint: http://localhost:9000
+      accessKey: YOUR_MINIO_ACCESS_KEY
+      secretKey: YOUR_MINIO_SECRET_KEY
+      bucket: happynews-bucket

@@ -1,0 +1,7 @@
+spring:
+  profiles:
+    active: dev  # Change to 'prod' in production
+
+app:
+  newsapi:
+    key: YOUR_NEWSAPI_KEY  # Replace with your NewsAPI key

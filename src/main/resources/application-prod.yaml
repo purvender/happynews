@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://your-rds-endpoint:5432/happynewsdb
+    username: youruser
+    password: yourpass
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+app:
+  storage:
+    type: s3
+    s3:
+      region: us-east-1
+      accessKey: YOUR_AWS_ACCESS_KEY
+      secretKey: YOUR_AWS_SECRET_KEY
+      bucket: happynews-bucket
