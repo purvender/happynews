@@ -25,3 +25,47 @@ A Spring Boot application for fetching news from NewsAPI, storing articles and i
 ```bash
 git clone https://github.com/yourusername/happynews.git
 cd happynews
+cd happynews
+2. Configure Environment
+Database: Set up a PostgreSQL database. Update credentials in src/main/resources/application-dev.yaml.
+Minio: Start Minio locally:
+bash
+Copy code
+docker run -p 9000:9000 -p 9001:9001 --name minio \
+  -e "MINIO_ROOT_USER=YOUR_MINIO_ACCESS_KEY" \
+  -e "MINIO_ROOT_PASSWORD=YOUR_MINIO_SECRET_KEY" \
+  quay.io/minio/minio server /data --console-address ":9001"
+Replace with your credentials. Create a bucket named happynews-bucket or update configuration accordingly.
+NewsAPI Key: Replace YOUR_NEWSAPI_KEY in src/main/resources/application.yaml with your actual NewsAPI key.
+3. Build and Run Application
+bash
+Copy code
+./gradlew build
+./gradlew bootRun
+4. Testing the Application
+Manually Trigger News Fetch: If a manual endpoint is added:
+bash
+Copy code
+curl -X POST http://localhost:8080/api/articles/fetch
+Search Articles:
+bash
+Copy code
+curl "http://localhost:8080/api/articles/search?keyword=Microsoft"
+5. Git Workflow
+After making changes, use:
+bash
+Copy code
+git add .
+git commit -m "Your commit message"
+git push origin main
+Future Enhancements
+Integrate additional news sources.
+Implement robust error handling and logging.
+Secure API endpoints with Spring Security.
+Expand search functionality and filtering options.
+© 2023 HappyNews Project
+
+---
+
+By following these instructions, you'll have a professionally structured project with version control, a clear setup guide, and detailed testing procedures. Adjust configuration values as needed for your environment.
+
