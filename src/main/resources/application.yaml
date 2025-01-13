@@ -4,4 +4,4 @@ spring:
 
 app:
   newsapi:
-    key: YOUR_NEWSAPI_KEY  # Replace with your NewsAPI key
+    key: efb88d739f91406589f4f900fd37dbed

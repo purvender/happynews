@@ -4,16 +4,22 @@ import ai.pepperorg.happynews.model.Article;
 import ai.pepperorg.happynews.model.NewsApiResponse;
 import ai.pepperorg.happynews.repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NewsServiceImpl implements NewsService {
 
     private final ArticleRepository articleRepository;
@@ -24,22 +30,55 @@ public class NewsServiceImpl implements NewsService {
     private String newsApiKey;
 
     @Override
-    public void fetchAndStoreArticles() {
-        String url = "https://newsapi.org/v2/top-headlines?language=en&apiKey=" + newsApiKey;
-        ResponseEntity<NewsApiResponse> response = restTemplate.getForEntity(url, NewsApiResponse.class);
+    public void fetchAndStoreArticles(String query, String searchIn, String sources, String domains,
+                                      String excludeDomains, String language, String sortBy,
+                                      int pageSize, int maxPages) {
+        for (int page = 1; page <= maxPages; page++) {
+            try {
+                StringBuilder urlBuilder = new StringBuilder("https://newsapi.org/v2/everything?");
+                urlBuilder.append("apiKey=").append(newsApiKey);
 
-        if(response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            for (NewsApiResponse.ArticleDTO dto : response.getBody().getArticles()) {
-                Article article = mapToArticle(dto);
-                if(dto.getUrlToImage() != null && !dto.getUrlToImage().isEmpty()) {
-                    String path = storageService.storeImage(dto.getUrlToImage());
-                    article.setLocalImagePath(path);
+                if (query != null) urlBuilder.append("&q=").append(URLEncoder.encode(query, StandardCharsets.UTF_8));
+                if (searchIn != null) urlBuilder.append("&searchIn=").append(searchIn);
+                if (sources != null) urlBuilder.append("&sources=").append(sources);
+                if (domains != null) urlBuilder.append("&domains=").append(domains);
+                if (excludeDomains != null) urlBuilder.append("&excludeDomains=").append(excludeDomains);
+                if (language != null) urlBuilder.append("&language=").append(language);
+                if (sortBy != null) urlBuilder.append("&sortBy=").append(sortBy);
+                urlBuilder.append("&pageSize=").append(pageSize).append("&page=").append(page);
+
+                ResponseEntity<NewsApiResponse> response = restTemplate.getForEntity(urlBuilder.toString(), NewsApiResponse.class);
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    List<NewsApiResponse.ArticleDTO> articles = response.getBody().getArticles();
+                    articles.forEach(dto -> {
+                        Article article = mapToArticle(dto);
+                        if (dto.getUrlToImage() != null) {
+                            String localPath = storageService.storeImage(dto.getUrlToImage());
+                            article.setLocalImagePath(localPath);
+                        }
+                        articleRepository.save(article);
+                    });
+                } else {
+                    log.error("Error fetching articles: {}", response.getStatusCode());
                 }
-                articleRepository.save(article);
+            } catch (Exception e) {
+                log.error("Error fetching articles: {}", e.getMessage());
             }
-        } else {
-            System.err.println("Failed to fetch articles: " + response.getStatusCode());
         }
+    }
+
+    @Override
+    public List<Article> searchArticles(String keyword, String source, String domain, String language,
+                                        String sortBy, int pageSize, int page) {
+        return articleRepository.findAll().stream()
+                .filter(article -> keyword == null || article.getTitle().toLowerCase().contains(keyword.toLowerCase()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Article getArticleById(Long id) {
+        return articleRepository.findById(id).orElseThrow(() -> new RuntimeException("Article not found"));
     }
 
     private Article mapToArticle(NewsApiResponse.ArticleDTO dto) {
@@ -48,21 +87,23 @@ public class NewsServiceImpl implements NewsService {
         article.setDescription(dto.getDescription());
         article.setContent(dto.getContent());
         article.setUrl(dto.getUrl());
-        if(dto.getSource() != null) {
-            article.setSource(dto.getSource().getName());
-        }
-        if(dto.getPublishedAt() != null && !dto.getPublishedAt().isEmpty()) {
-            try {
-                LocalDateTime publishedAt = LocalDateTime.parse(dto.getPublishedAt(), DateTimeFormatter.ISO_DATE_TIME);
-                article.setPublishedAt(publishedAt);
-            } catch(Exception e) {
-                article.setPublishedAt(LocalDateTime.now());
-            }
-        } else {
-            article.setPublishedAt(LocalDateTime.now());
-        }
+        article.setPublishedAt(parsePublishedAt(dto.getPublishedAt()));
         article.setImageUrl(dto.getUrlToImage());
-        article.setLanguage("en");
+        article.setSource(dto.getSource().getName());
         return article;
+    }
+
+    private LocalDateTime parsePublishedAt(String publishedAt) {
+        if (publishedAt == null || publishedAt.isEmpty()) {
+            return LocalDateTime.now();
+        }
+
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+            return LocalDateTime.parse(publishedAt, formatter);
+        } catch (Exception e) {
+            log.error("Error parsing publishedAt: {}", publishedAt, e);
+            return LocalDateTime.now();
+        }
     }
 }

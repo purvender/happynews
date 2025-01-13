@@ -15,6 +15,7 @@ public class Article {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(columnDefinition = "TEXT")
     private String title;
 
     @Column(length = 2048)
@@ -23,13 +24,19 @@ public class Article {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Column(columnDefinition = "TEXT")
     private String url;
+
+    @Column(columnDefinition = "TEXT")
     private String source;
 
     private LocalDateTime publishedAt;
+
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
+
+    @Column(columnDefinition = "TEXT")
     private String localImagePath;
-    private String language;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }
