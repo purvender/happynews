@@ -6,6 +6,7 @@ import ai.pepperorg.happynews.repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -69,6 +70,14 @@ public class NewsServiceImpl implements NewsService {
     }
 
     @Override
+    public List<Article> getLatestArticles(int pageSize) {
+        return articleRepository.findAll(Sort.by(Sort.Direction.DESC, "publishedAt"))
+                .stream()
+                .limit(pageSize)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Article> searchArticles(String keyword, String source, String domain, String language,
                                         String sortBy, int pageSize, int page) {
         return articleRepository.findAll().stream()
@@ -76,10 +85,6 @@ public class NewsServiceImpl implements NewsService {
                 .collect(Collectors.toList());
     }
 
-    @Override
-    public Article getArticleById(Long id) {
-        return articleRepository.findById(id).orElseThrow(() -> new RuntimeException("Article not found"));
-    }
 
     private Article mapToArticle(NewsApiResponse.ArticleDTO dto) {
         Article article = new Article();

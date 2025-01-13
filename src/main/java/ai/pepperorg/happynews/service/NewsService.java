@@ -9,8 +9,10 @@ public interface NewsService {
                                String excludeDomains, String language, String sortBy,
                                int pageSize, int maxPages);
 
+    List<Article> getLatestArticles(int pageSize);
+
     List<Article> searchArticles(String keyword, String source, String domain, String language,
                                  String sortBy, int pageSize, int page);
 
-    Article getArticleById(Long id);
+
 }

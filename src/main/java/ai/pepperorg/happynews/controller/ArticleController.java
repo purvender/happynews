@@ -17,6 +17,11 @@ public class ArticleController {
     private final NewsService newsService;
     private final Scheduler scheduler;
 
+    @GetMapping("/latest")
+    public ResponseEntity<List<Article>> getLatestArticles(@RequestParam(defaultValue = "10") int pageSize) {
+        return ResponseEntity.ok(newsService.getLatestArticles(pageSize));
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<Article>> searchArticles(
             @RequestParam(required = false) String keyword,

@@ -16,7 +16,7 @@ public class QuartzConfig {
                         "latest",
                         "motivational",
                         "spiritual",
-                        "progress",
+                        "bitcoin",
                         "good news",
                         "health",
                         "mental health",
