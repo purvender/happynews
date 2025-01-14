@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://your-rds-endpoint:5432/happynewsdb
-    username: youruser
-    password: yourpass
+    url: jdbc:postgresql://happynewsdb.cly06a0o2a0m.us-east-1.rds.amazonaws.com:5432/happynewsdb
+    username: postgres
+    password: bluetree
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,6 +15,4 @@ app:
     type: s3
     s3:
       region: us-east-1
-      accessKey: YOUR_AWS_ACCESS_KEY
-      secretKey: YOUR_AWS_SECRET_KEY
       bucket: happynews-bucket

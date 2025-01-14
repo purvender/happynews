@@ -1,8 +1,6 @@
 package ai.pepperorg.happynews.service.storage;
 
 import ai.pepperorg.happynews.service.StorageService;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -28,14 +26,11 @@ public class S3StorageService implements StorageService {
 
     public S3StorageService(
             @Value("${app.storage.s3.region}") String region,
-            @Value("${app.storage.s3.accessKey}") String accessKey,
-            @Value("${app.storage.s3.secretKey}") String secretKey,
             @Value("${app.storage.s3.bucket}") String bucket) {
 
-        BasicAWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
+        // Build the AmazonS3 client using default credentials (IAM role)
         this.s3Client = AmazonS3ClientBuilder.standard()
                 .withRegion(region)
-                .withCredentials(new AWSStaticCredentialsProvider(creds))
                 .build();
         this.bucket = bucket;
 
