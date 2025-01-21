@@ -1,6 +1,5 @@
 package ai.pepperorg.happynews.service.storage;
 
-import ai.pepperorg.happynews.service.StorageService;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +50,7 @@ public class MinioStorageService implements StorageService {
             // Open a connection to the image URL
             URL url = new URL(imageUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0");
             connection.setRequestMethod("GET");
             connection.setDoInput(true);
 

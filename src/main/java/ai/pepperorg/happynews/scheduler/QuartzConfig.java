@@ -16,7 +16,7 @@ public class QuartzConfig {
                         "latest",
                         "motivational",
                         "spiritual",
-                        "bitcoin",
+                        "god",
                         "good news",
                         "health",
                         "mental health",
@@ -33,6 +33,10 @@ public class QuartzConfig {
                         "kindness",
                         "joy",
                         "achievement",
+                        "india",
+                        "hindu",
+                        "krishna",
+                        "ram",
                         "gratitude"))
                 .usingJobData("searchIn", "title,description,content") // Search in title, description, and content
                 .usingJobData("sources", "") // No specific sources by default

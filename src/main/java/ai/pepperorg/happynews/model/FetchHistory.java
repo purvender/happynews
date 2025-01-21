@@ -5,7 +5,6 @@ import lombok.NoArgsConstructor;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "fetch_history")
 @Data
@@ -15,10 +14,15 @@ public class FetchHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int articlesFetched; // Count of articles fetched
-    private String query;        // Search query used
-    private LocalDateTime fetchTime; // Timestamp of the fetch
+    private int articlesFetched;
 
+    @Lob
     @Column(columnDefinition = "TEXT")
-    private String details; // Additional details or errors
+    private String query;
+
+    private LocalDateTime fetchTime;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String details;
 }

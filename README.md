@@ -1,61 +1,45 @@
-# HappyNews Backend
+# HappyNews
 
-A Spring Boot application for fetching news from NewsAPI, storing articles and images using PostgreSQL and S3, and providing a REST API with advanced search functionality. The application uses Quartz for scheduling tasks, supports dynamic parameter updates, and is designed for deployment on AWS EC2 using Free Tier resources.
+## Overview
+HappyNews is a Spring Boot-based web application designed to aggregate, process, and present positive, motivational, and uplifting news. The platform utilizes external news APIs, stores data in a PostgreSQL database, and supports both S3 and MinIO for image storage, depending on the environment.
 
 ## Features
-
-- Dynamic Article Fetching: Periodic fetching of news articles using Quartz Scheduler.
-- Advanced Search: Search with filters (keywords, source, language, publication date, etc.).
-- Image Storage: Stores images in AWS S3.
-- Database Persistence: Stores articles and fetch history in PostgreSQL RDS.
-- Configurable Scheduler: Update Quartz job parameters dynamically.
-- Extensibility: Easily add new news sources and adjust search parameters.
+- Fetches articles from external news APIs.
+- Stores fetched articles in a PostgreSQL database.
+- Supports advanced search functionality for articles.
+- Scheduler (Quartz) for periodic fetching of new articles.
+- Dual storage service (S3 for production, MinIO for development).
 
 ## Prerequisites
+### Development Environment:
+- **Java**: Version 21 or later.
+- **Gradle**: Version 7.0 or later.
+- **Docker**: Installed and running.
+- **PostgreSQL**: Version 12 or later.
+- **MinIO**: For local image storage.
 
-- Java 21
-- PostgreSQL (RDS)
-- AWS S3
-- AWS Free Tier account
-- Docker (for containerizing the application)
-- Git
+### Production Environment:
+- **AWS S3**: Configured with access and secret keys.
+- **PostgreSQL**: Hosted database.
+- **Docker**: Installed and running.
 
-## Setup Instructions
+## Installation
 
 ### 1. Clone the Repository
-
 ```bash
-git clone https://github.com/yourusername/happynews.git
-cd happynews
+$ git clone https://github.com/<your-repo>/happynews.git
+$ cd happynews
 ```
 
-### 2. Configure AWS Resources
-
-#### a. Default VPC
-We are using the default VPC, which comes pre-configured with public subnets, an Internet Gateway, and default route tables.
-
-#### b. S3 Bucket Setup
-- Create an S3 bucket named `happynews-bucket` in your AWS Console under Services > S3.
-- Leave default settings or configure bucket policies as needed.
-
-#### c. RDS PostgreSQL Setup
-- In the AWS Console, navigate to RDS > Create database.
-- Choose PostgreSQL with Free Tier template.
-- Set DB Instance Identifier as `happynewsdb`, and configure the master username and password.
-- Make sure the instance uses the default VPC and private subnets.
-- Public access should be disabled, and a security group should allow inbound traffic on port `5432` from your EC2 instance.
-
-### 3. Application Configuration
-
-#### a. Update `application-prod.yaml`
-In the `src/main/resources` directory, modify `application-prod.yaml` with your AWS RDS and S3 details:
+### 2. Configure Application Properties
+Edit the `application.yml` file in the `src/main/resources` directory to update your database and storage configuration:
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://<RDS_ENDPOINT>:5432/happynewsdb
-    username: postgres
-    password: bluetree
+    url: jdbc:postgresql://<host>:<port>/<dbname>
+    username: <db-username>
+    password: <db-password>
   jpa:
     hibernate:
       ddl-auto: update
@@ -65,103 +49,82 @@ spring:
 
 app:
   storage:
-    type: s3
-    s3:
-      region: us-east-1
+    type: minio
+    minio:
+      endpoint: http://localhost:9000
+      accessKey: <minio-access-key>
+      secretKey: <minio-secret-key>
       bucket: happynews-bucket
 ```
-Replace `<RDS_ENDPOINT>` with your actual RDS endpoint.
 
-#### b. IAM Role for EC2
-Ensure your EC2 instance has an IAM role attached (e.g., `HappyNewsEC2Role`) with permissions for S3 and RDS.
-
-### 4. Install Required Tools on EC2 (Ubuntu)
-
-#### a. Connect to Your EC2 Instance
+### 3. Build the Application
 ```bash
-ssh -i "/path/to/happynewskeypair.pem" ubuntu@<EC2_PUBLIC_IP>
-```
-Replace `<EC2_PUBLIC_IP>` with your instance's IP.
-
-#### b. Update the System
-```bash
-sudo apt update
-sudo apt upgrade -y
+$ ./gradlew build
 ```
 
-#### c. Install Docker
-```bash
-sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-sudo apt update
-sudo apt install -y docker-ce
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker ubuntu
-```
-Log out and log back in to apply group changes.
+### 4. Run with Docker
+#### Prepare the Docker Environment:
+1. **Build the Docker Image**:
+   ```bash
+   $ docker build -t happynews:latest .
+   ```
 
-### 5. Transfer Application Files to EC2
+2. **Run the Container**:
+   ```bash
+   $ docker run -d -p 8080:8080 --name happynews-app happynews:latest
+   ```
 
-On your local machine, run these commands to transfer the JAR and Dockerfile:
+#### Verify the Application:
+Open your browser and navigate to `http://<server-ip>:8080`.
 
-```bash
-scp -i /path/to/happynewskeypair.pem /Users/purvenderhooda/Desktop/happynews/build/libs/happynews-0.0.1-SNAPSHOT.jar ubuntu@<EC2_PUBLIC_IP>:~/happynews.jar
-scp -i /path/to/happynewskeypair.pem /Users/purvenderhooda/Desktop/happynews/Dockerfile ubuntu@<EC2_PUBLIC_IP>:~/Dockerfile
-```
-Replace `<EC2_PUBLIC_IP>` with your instance's public IP.
+## Usage
+### Scheduled Jobs
+The application uses Quartz Scheduler to fetch new articles periodically. You can modify the fetch interval in the `QuartzConfig` class:
 
-### 6. Build and Run the Docker Image on EC2
-
-#### a. SSH into the EC2 Instance
-```bash
-ssh -i "/path/to/happynewskeypair.pem" ubuntu@<EC2_PUBLIC_IP>
+```java
+.withSchedule(SimpleScheduleBuilder
+    .simpleSchedule()
+    .withIntervalInHours(6) // Run every 6 hours
+    .repeatForever())
 ```
 
-#### b. Verify Files
+### Logging
+Logs are available in the container and can be viewed using Docker:
 ```bash
-ls -l ~/happynews.jar ~/Dockerfile
+$ docker logs -f happynews-app
 ```
 
-#### c. Build Docker Image
+## Deployment on AWS EC2
+1. **Transfer JAR and Dockerfile**:
+   Use `scp` to copy the JAR and Dockerfile to your EC2 instance.
+   ```bash
+   $ scp -i "<keypair>.pem" happynews-0.0.1-SNAPSHOT.jar Dockerfile ubuntu@<ec2-ip>:/home/ubuntu/
+   ```
+
+2. **Build and Run**:
+   ```bash
+   $ docker build -t happynews:latest .
+   $ docker run -d -p 8080:8080 --name happynews-app happynews:latest
+   ```
+
+## Testing
+Run tests with Gradle:
 ```bash
-docker build -t happynews:latest .
+$ ./gradlew test
 ```
 
-#### d. Run Docker Container
-```bash
-docker run -d -p 8080:8080 happynews:latest
-```
+## Contributors
+- **Purvender Hooda**
 
-### 7. Test the Application
+## License
+This project is licensed under the MIT License. See the LICENSE file for details.
 
-Use curl or a browser to test your endpoints. For example:
-```bash
-curl -X GET "http://<EC2_PUBLIC_IP>:8080/api/articles/search?keyword=technology&pageSize=10&page=1"
-```
-Replace `<EC2_PUBLIC_IP>` with your instance's public IP.
+## Future Enhancements
+- Add a front-end for better user interaction.
+- Implement caching for API responses.
+- Enhance logging and monitoring.
 
-### Summary of How Components Connect
-
-- **EC2 Instance**: Runs the Dockerized Spring Boot application. It uses an IAM role to securely access AWS services like S3 and RDS.
-- **RDS PostgreSQL**: Stores application data. Your EC2 instance connects to it using JDBC with credentials specified in the configuration.
-- **S3 Bucket**: Stores images and is accessed by your application through the IAM role, which provides necessary permissions.
-- **Security Groups**:
-    - EC2 Security Group controls who can SSH and access HTTP endpoints.
-    - RDS Security Group restricts database connections to the EC2 instance.
-- **IAM Role**: Grants the EC2 instance permissions to access S3 and RDS, eliminating the need for hardcoded credentials.
-- **Local System**: Used for development, file transfer (via SCP), and SSH management of the EC2 instance.
-
----
-
-### Future Enhancements and Next Steps
-
-- **Monitoring**: Set up CloudWatch logs and metrics to monitor application performance and health.
-- **Scaling**: Consider Auto Scaling Groups and load balancers for high availability.
-- **Security**: Use HTTPS, restrict SSH access, and manage secrets securely.
-- **CI/CD**: Automate builds and deployments using AWS CodePipeline, GitHub Actions, or similar tools.
-
----
-
-Feel free to copy this content directly into your `README.md` file. This file uses fenced code blocks for commands and configuration snippets to ensure easy copying without formatting issues.
+## Contact
+For queries or issues, please reach out to:
+- **Email**: purvender@gmail.com
+- **GitHub**: [https://github.com/purvender]

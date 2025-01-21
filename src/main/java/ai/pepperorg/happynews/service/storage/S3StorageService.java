@@ -1,6 +1,5 @@
 package ai.pepperorg.happynews.service.storage;
 
-import ai.pepperorg.happynews.service.StorageService;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -47,6 +46,7 @@ public class S3StorageService implements StorageService {
             URL url = new URL(imageUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0");
             connection.setDoInput(true);
             connection.setInstanceFollowRedirects(true); // Ensure redirections are handled
 

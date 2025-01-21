@@ -1,12 +1,13 @@
 package ai.pepperorg.happynews.service;
 
 import ai.pepperorg.happynews.model.Article;
+import ai.pepperorg.happynews.model.FetchHistory;
 import ai.pepperorg.happynews.model.NewsApiResponse;
 import ai.pepperorg.happynews.repository.ArticleRepository;
-import lombok.RequiredArgsConstructor;
+import ai.pepperorg.happynews.repository.FetchHistoryRepository;
+import ai.pepperorg.happynews.service.storage.StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -16,24 +17,33 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
-public class NewsServiceImpl implements NewsService {
+public class NewsApiImpl extends AbstractNewsService {
 
-    private final ArticleRepository articleRepository;
     private final StorageService storageService;
+    private final FetchHistoryRepository fetchHistoryRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${app.newsapi.key}")
     private String newsApiKey;
 
+    public NewsApiImpl(ArticleRepository articleRepository,
+                       StorageService storageService,
+                       FetchHistoryRepository fetchHistoryRepository) {
+        super(articleRepository);
+        this.storageService = storageService;
+        this.fetchHistoryRepository = fetchHistoryRepository;
+    }
+
     @Override
     public void fetchAndStoreArticles(String query, String searchIn, String sources, String domains,
                                       String excludeDomains, String language, String sortBy,
                                       int pageSize, int maxPages) {
+        int totalFetched = 0;
+        StringBuilder detailsBuilder = new StringBuilder();
+
         for (int page = 1; page <= maxPages; page++) {
             try {
                 StringBuilder urlBuilder = new StringBuilder("https://newsapi.org/v2/everything?");
@@ -52,39 +62,42 @@ public class NewsServiceImpl implements NewsService {
 
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                     List<NewsApiResponse.ArticleDTO> articles = response.getBody().getArticles();
-                    articles.forEach(dto -> {
+                    totalFetched += articles.size();
+
+                    for (NewsApiResponse.ArticleDTO dto : articles) {
                         Article article = mapToArticle(dto);
                         if (dto.getUrlToImage() != null) {
                             String localPath = storageService.storeImage(dto.getUrlToImage());
                             article.setLocalImagePath(localPath);
                         }
                         articleRepository.save(article);
-                    });
+                    }
+                    detailsBuilder.append("Page ")
+                            .append(page)
+                            .append(": Successfully fetched ")
+                            .append(articles.size())
+                            .append(" articles.\n");
                 } else {
+                    detailsBuilder.append("Error on page ").append(page)
+                            .append(": ").append(response.getStatusCode()).append("\n");
                     log.error("Error fetching articles: {}", response.getStatusCode());
                 }
             } catch (Exception e) {
+                detailsBuilder.append("Exception on page ").append(page)
+                        .append(": ").append(e.getMessage()).append("\n");
                 log.error("Error fetching articles: {}", e.getMessage());
             }
         }
-    }
 
-    @Override
-    public List<Article> getLatestArticles(int pageSize) {
-        return articleRepository.findAll(Sort.by(Sort.Direction.DESC, "publishedAt"))
-                .stream()
-                .limit(pageSize)
-                .collect(Collectors.toList());
-    }
+        // Create and save a FetchHistory record after fetching
+        FetchHistory history = new FetchHistory();
+        history.setArticlesFetched(totalFetched);
+        history.setQuery(query);
+        history.setFetchTime(LocalDateTime.now());
+        history.setDetails(detailsBuilder.toString());
 
-    @Override
-    public List<Article> searchArticles(String keyword, String source, String domain, String language,
-                                        String sortBy, int pageSize, int page) {
-        return articleRepository.findAll().stream()
-                .filter(article -> keyword == null || article.getTitle().toLowerCase().contains(keyword.toLowerCase()))
-                .collect(Collectors.toList());
+        fetchHistoryRepository.save(history);
     }
-
 
     private Article mapToArticle(NewsApiResponse.ArticleDTO dto) {
         Article article = new Article();
@@ -102,7 +115,6 @@ public class NewsServiceImpl implements NewsService {
         if (publishedAt == null || publishedAt.isEmpty()) {
             return LocalDateTime.now();
         }
-
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
             return LocalDateTime.parse(publishedAt, formatter);
